@@ -221,7 +221,7 @@ def send_html(handler):
     handler.wfile.write(body)
 
 
-def control_authorized(handler):
+def _control_authorized(handler):
     """
     Localhost is allowed by default.
 
@@ -321,7 +321,7 @@ class Handler(SimpleHTTPRequestHandler):
 
         if (
             path in protected_routes
-            and not control_authorized(self)
+            and not _control_authorized(self)
         ):
             send_forbidden(self)
             return

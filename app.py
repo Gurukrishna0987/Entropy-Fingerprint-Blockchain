@@ -510,5 +510,8 @@ if __name__ == "__main__":
         host   = config.FLASK_HOST,
         port   = config.FLASK_PORT,
         debug  = False,
-        use_reloader = False
+        use_reloader = False,
+        # The dashboard is a local lab demo, not a production service.
+        # Werkzeug >= 3 refuses to serve outside debug mode without this.
+        allow_unsafe_werkzeug = True,
     )
