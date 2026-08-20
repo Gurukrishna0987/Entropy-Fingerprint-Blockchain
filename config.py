@@ -71,6 +71,9 @@ DASHBOARD_DIR = str(BASE_PATH / "dashboard")
 DATA_DIR = str(BASE_PATH / "data")
 TRAINING_DATA_DIR = str(BASE_PATH / "data" / "training")
 TESTING_DATA_DIR = str(BASE_PATH / "data" / "testing")
+# Controlled victim fixture tree. The attacker emulator destroys this
+# content during demonstrations; never point it at real user data.
+VICTIM_FILES_DIR = str(BASE_PATH / "victim_server" / "user_files")
 QUARANTINE_DIR = _env_path("ENTROPY_QUARANTINE_DIR", BASE_PATH / "quarantine_storage")
 # Runtime files
 LOG_FILE = _env_path("ENTROPY_LOG_FILE", BASE_PATH / "logs" / "entropy_system.log")
@@ -95,7 +98,9 @@ def ensure_runtime_directories() -> None:
 # intentionally centralized here until the application factory work in Day 2.
 ensure_runtime_directories()
 
-# Folders to watch. Keep the default constrained to generated simulator data.
+# Folders to watch. Since the Day 2 unified lab, the default is the controlled
+# victim fixture directory so the detector observes attacker emulations out of
+# the box. Keep overrides constrained to generated/simulator data.
 _watch_folders = os.getenv("ENTROPY_WATCH_FOLDERS")
 if _watch_folders:
     WATCH_FOLDERS = [
@@ -104,7 +109,7 @@ if _watch_folders:
         if item.strip()
     ]
 else:
-    WATCH_FOLDERS = [TESTING_DATA_DIR]
+    WATCH_FOLDERS = [VICTIM_FILES_DIR]
 
 # Processes that must never be terminated by the response layer.
 WHITELISTED_PROCESSES = [

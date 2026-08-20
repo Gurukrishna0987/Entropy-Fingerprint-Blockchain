@@ -32,8 +32,14 @@ class ConfigurationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 config._env_float("TEST_FLOAT", 1.0, minimum=0.0)
 
-    def test_default_watch_folder_is_confined_to_test_data(self):
-        self.assertEqual(config.WATCH_FOLDERS, [config.TESTING_DATA_DIR])
+    def test_default_watch_folder_is_the_controlled_victim_directory(self):
+        # Since the Day 2 unified lab, the detector watches the victim fixture
+        # tree by default so attacker emulations are detected out of the box.
+        self.assertEqual(config.WATCH_FOLDERS, [config.VICTIM_FILES_DIR])
+        self.assertEqual(
+            Path(config.VICTIM_FILES_DIR),
+            Path(config.BASE_PATH) / "victim_server" / "user_files",
+        )
 
 
 if __name__ == "__main__":

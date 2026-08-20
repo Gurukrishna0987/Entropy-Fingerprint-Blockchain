@@ -14,6 +14,7 @@ Ganache smart contract.
 
 | Component | Purpose | Current command |
 | --- | --- | --- |
+| **Unified launcher** | Starts pipeline + dashboard + victim + attacker with graceful shutdown | `python run_lab.py` |
 | Environment check | Verifies Python dependencies | `python main.py` |
 | Detection pipeline | Monitor → entropy → decision → response → ledger | `python monitoring/pipeline_runner.py` |
 | SOC dashboard | Reads events and ledger data | `python app.py` |
@@ -22,13 +23,21 @@ Ganache smart contract.
 | Fixture generator | Creates a clean fake user directory | `python victim_server/create_fake_files.py --clean` |
 | Training-data generator | Creates synthetic DQN samples | `python data/ransomware_simulator.py` |
 
-The services are still separate processes. A unified launcher and direct lab
-integration are planned for repair Day 2; see `docs/repair-plan.md`.
+`run_lab.py` is the supported way to run the lab. It refuses to start when
+required packages are missing, regenerates victim fixtures when they are
+absent, prints each service URL once reachable, and forwards Ctrl+C/SIGTERM so
+every service (including the pipeline's local-ledger flush) shuts down cleanly.
+Use `--reset` for clean fixtures, `--seed` for reproducible ones, and
+`--services` to start a subset. The legacy `entropy_system.py` and
+`blockchain/blockchain_logger.py` facades were removed; see
+`docs/architecture.md`.
 
 ## Architecture
 
 ```text
-watchdog FileMonitor
+run_lab.py (supervises all four child processes)
+        │
+watchdog FileMonitor (victim_server/user_files by default)
         │
         ▼
 EventPipeline ──► EntropyAnalyzer
@@ -44,9 +53,8 @@ Flask SOC dashboard
 ```
 
 The attacker and victim web applications operate only on generated files under
-`victim_server/user_files`. By default, the detection pipeline watches
-`data/testing`. Until Day 2 unifies the lab, set `ENTROPY_WATCH_FOLDERS` to the
-fixture directory when testing attacker-to-detector behavior.
+`victim_server/user_files`, and the detection pipeline watches that same
+controlled fixture tree by default.
 
 ## Requirements
 
@@ -67,6 +75,7 @@ python -m pip install -r requirements.txt
 cp .env.example .env
 python victim_server/create_fake_files.py --clean
 python main.py
+python run_lab.py
 ```
 
 ### Windows PowerShell
@@ -79,10 +88,12 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 python victim_server/create_fake_files.py --clean
 python main.py
+python run_lab.py
 ```
 
 `main.py` is a health check. It exits nonzero if required packages are missing;
-it does not start a server.
+it does not start a server. `run_lab.py` performs the same check before
+starting anything.
 
 ## Configuration
 
@@ -98,24 +109,16 @@ Copy `.env.example` to `.env`. Important settings include:
 Relative paths are resolved from the repository root. Do not commit `.env`; it
 is intentionally ignored.
 
-To connect the current pipeline to the victim lab on Linux/macOS, use:
+To watch different directories, set `ENTROPY_WATCH_FOLDERS` in `.env`
+(default: `victim_server/user_files`).
+
+## Running the lab
+
+After setup, one command starts everything:
 
 ```bash
-ENTROPY_WATCH_FOLDERS=victim_server/user_files \
-  python monitoring/pipeline_runner.py
-```
-
-On Windows, set the same value in `.env` before starting the pipeline.
-
-## Running the current multi-process demo
-
-After setup, use separate terminals:
-
-```bash
-python monitoring/pipeline_runner.py
-python app.py
-python victim_server/app.py
-python attacker_server/app.py
+python run_lab.py            # all four services, Ctrl+C stops them all
+python run_lab.py --reset    # start over from clean fixtures
 ```
 
 Default local URLs:
@@ -124,20 +127,32 @@ Default local URLs:
 - Attacker console: <http://127.0.0.1:8001>
 - Victim UI: <http://127.0.0.1:8002>
 
+Individual services can still be run manually for development:
+
+```bash
+python monitoring/pipeline_runner.py
+python app.py
+python victim_server/app.py
+python attacker_server/app.py
+```
+
 Do not expose the lab services to an untrusted network. The demo control routes
 are intentionally simple and are not an authenticated production API.
 
 ## Tests
 
-The Day 1 foundation tests use only Python's standard library:
+The foundation tests use only Python's standard library (web-service tests
+skip when Flask is absent):
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
 They cover core entropy math, deterministic fixture generation, configuration
-validation, JSON assets, and health-check exit behavior. Later repair days will
-add integration, response-safety, dashboard, model, and blockchain tests.
+validation, JSON assets, health-check exit behavior, and the Day 2 unified
+launcher (dependency gating, fixture regeneration, readiness probes, graceful
+child shutdown, and legacy-path retirement). Later repair days will add
+response-safety, dashboard, model, and blockchain tests.
 
 ## Generated state
 
@@ -177,6 +192,8 @@ SQLite ledger. That fallback is not a blockchain and provides no immutability.
 
 ## Repair status
 
-This repository is being repaired in seven ordered stages. Day 1 establishes a
-clean, reproducible foundation. The complete scope and acceptance criteria are
-tracked in [`docs/repair-plan.md`](docs/repair-plan.md).
+This repository is being repaired in seven ordered stages. Day 1 established a
+clean, reproducible foundation. Day 2 delivered the unified launcher, connected
+the detector to the victim fixture tree, and retired the legacy orchestrator
+facades. The complete scope and acceptance criteria are tracked in
+[`docs/repair-plan.md`](docs/repair-plan.md).

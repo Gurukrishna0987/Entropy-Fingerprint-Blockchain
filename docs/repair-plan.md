@@ -4,7 +4,7 @@ This plan converts the repository from several loosely connected prototypes
 into a reproducible, safe lab application. Each day should finish with a clean
 working tree, automated checks, and documented behavior.
 
-## Day 1 — Repository foundation
+## Day 1 — Repository foundation — ✅ complete
 
 **Scope**
 
@@ -24,12 +24,18 @@ working tree, automated checks, and documented behavior.
 - `python main.py` exits nonzero when dependencies are missing.
 - `python -m unittest discover -s tests -v` passes without third-party packages.
 
-## Day 2 — Unified application integration
+## Day 2 — Unified application integration — ✅ complete
 
 - Select one orchestrator and retire duplicate execution paths.
+  (`monitoring.pipeline_runner` is canonical; `entropy_system.py` and
+  `blockchain/blockchain_logger.py` facades removed.)
 - Add one launcher for pipeline, dashboard, attacker, and victim services.
+  (`run_lab.py` supervises all four with dependency gating and readiness probes.)
 - Connect the controlled victim fixture directory to the detector.
+  (`ENTROPY_WATCH_FOLDERS` now defaults to `victim_server/user_files`.)
 - Add graceful startup/shutdown and integration tests.
+  (Launcher forwards Ctrl+C/SIGTERM, pipeline flushes its ledger on SIGTERM;
+  covered by `tests/test_launcher.py`.)
 
 ## Day 3 — Safe response and process attribution
 

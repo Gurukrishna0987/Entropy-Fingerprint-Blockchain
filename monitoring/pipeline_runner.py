@@ -488,8 +488,21 @@ class PipelineRunner:
 
 if __name__ == "__main__":
 
-    import colorama
-    colorama.init()
+    import signal as _signal
+
+    try:
+        import colorama
+        colorama.init()
+    except ImportError:
+        # colorama is optional; plain terminal output is fine without it.
+        pass
+
+    def _sigterm_shutdown(signum, frame):
+        # Supervisors terminate with SIGTERM; route it through the same
+        # graceful stop + ledger flush path as Ctrl+C.
+        raise KeyboardInterrupt
+
+    _signal.signal(_signal.SIGTERM, _sigterm_shutdown)
 
     runner = PipelineRunner()
     runner.start()
