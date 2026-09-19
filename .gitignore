@@ -41,6 +41,8 @@ ai/*.pth
 ai/*.pt
 
 # Build and package output
+node_modules/
 build/
 dist/
 *.egg-info/
+*.tsbuildinfo
