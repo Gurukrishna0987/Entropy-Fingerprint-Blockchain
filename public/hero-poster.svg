@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#020c0a"/>
+      <stop offset="0.48" stop-color="#061b18"/>
+      <stop offset="1" stop-color="#010504"/>
+    </linearGradient>
+    <radialGradient id="mint" cx="50%" cy="18%" r="70%">
+      <stop offset="0" stop-color="#0ea879" stop-opacity=".52"/>
+      <stop offset=".38" stop-color="#07533d" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#010504" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="100%" r="80%">
+      <stop offset="0" stop-color="#0b8062" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#010504" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="55"/></filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <ellipse cx="800" cy="130" rx="600" ry="410" fill="url(#mint)" filter="url(#blur)"/>
+  <ellipse cx="820" cy="980" rx="720" ry="290" fill="url(#glow)" filter="url(#blur)"/>
+  <path d="M-120 730C190 490 400 560 570 760c155 182 336 175 522-10 180-180 355-235 630-130v450H-120Z" fill="#031511" opacity=".52"/>
+  <path d="M-80 700C240 500 395 592 595 790c150 149 315 154 500-39 166-173 334-230 590-150" fill="none" stroke="#17bc87" stroke-opacity=".16" stroke-width="32" filter="url(#blur)"/>
+</svg>
